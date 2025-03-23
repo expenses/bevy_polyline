@@ -66,6 +66,7 @@ pub struct PolylineBundle {
 #[derive(Debug, Default, Asset, Clone, TypePath)]
 pub struct Polyline {
     pub vertices: Vec<Vec3>,
+    pub colors: Vec<Vec3>,
 }
 
 #[derive(Debug, Clone, Default, Component)]
@@ -87,9 +88,16 @@ impl RenderAsset for GpuPolyline {
             label: Some("Polyline Vertex Buffer"),
             contents: vertex_buffer_data,
         });
+        let color_buffer_data = bytemuck::cast_slice(polyline.colors.as_slice());
+        let color_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+            usage: BufferUsages::VERTEX,
+            label: Some("Polyline Color Buffer"),
+            contents: color_buffer_data,
+        });
 
         Ok(GpuPolyline {
             vertex_buffer,
+            color_buffer,
             vertex_count: polyline.vertices.len() as u32,
         })
     }
@@ -104,6 +112,7 @@ pub struct PolylineUniform {
 #[derive(Debug, Clone)]
 pub struct GpuPolyline {
     pub vertex_buffer: Buffer,
+    pub color_buffer: Buffer,
     pub vertex_count: u32,
 }
 
@@ -206,25 +215,49 @@ impl SpecializedRenderPipeline for PolylinePipeline {
             false => TextureFormat::bevy_default(),
         };
 
-        let mut vertex_layout = VertexBufferLayout {
-            step_mode: VertexStepMode::Instance,
-            array_stride: VertexFormat::Float32x3.size(),
-            attributes: vec![VertexAttribute {
-                format: VertexFormat::Float32x3,
-                offset: 0,
-                shader_location: 0,
-            }],
-        };
-
         RenderPipelineDescriptor {
             vertex: VertexState {
                 shader: self.shader.clone(),
                 entry_point: "vertex".into(),
                 shader_defs: shader_defs.clone(),
-                buffers: vec![vertex_layout.clone(), {
-                    vertex_layout.attributes[0].shader_location = 1;
-                    vertex_layout
-                }],
+                buffers: vec![
+                    VertexBufferLayout {
+                        step_mode: VertexStepMode::Instance,
+                        array_stride: VertexFormat::Float32x3.size(),
+                        attributes: vec![VertexAttribute {
+                            format: VertexFormat::Float32x3,
+                            offset: 0,
+                            shader_location: 0,
+                        }],
+                    },
+                    VertexBufferLayout {
+                        step_mode: VertexStepMode::Instance,
+                        array_stride: VertexFormat::Float32x3.size(),
+                        attributes: vec![VertexAttribute {
+                            format: VertexFormat::Float32x3,
+                            offset: 0,
+                            shader_location: 1,
+                        }],
+                    },
+                    VertexBufferLayout {
+                        step_mode: VertexStepMode::Instance,
+                        array_stride: VertexFormat::Float32x3.size(),
+                        attributes: vec![VertexAttribute {
+                            format: VertexFormat::Float32x3,
+                            offset: 0,
+                            shader_location: 2,
+                        }],
+                    },
+                    VertexBufferLayout {
+                        step_mode: VertexStepMode::Instance,
+                        array_stride: VertexFormat::Float32x3.size(),
+                        attributes: vec![VertexAttribute {
+                            format: VertexFormat::Float32x3,
+                            offset: 0,
+                            shader_location: 3,
+                        }],
+                    },
+                ],
             },
             fragment: Some(FragmentState {
                 shader: self.shader.clone(),
@@ -404,6 +437,8 @@ impl<P: PhaseItem> RenderCommand<P> for DrawPolyline {
             let buffer_size = gpu_polyline.vertex_buffer.size() - item_size;
             pass.set_vertex_buffer(0, gpu_polyline.vertex_buffer.slice(..buffer_size));
             pass.set_vertex_buffer(1, gpu_polyline.vertex_buffer.slice(item_size..));
+            pass.set_vertex_buffer(2, gpu_polyline.color_buffer.slice(..buffer_size));
+            pass.set_vertex_buffer(3, gpu_polyline.color_buffer.slice(item_size..));
 
             let num_instances = gpu_polyline.vertex_count.max(1) - 1;
             pass.draw(0..6, 0..num_instances);
