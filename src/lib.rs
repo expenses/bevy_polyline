@@ -21,7 +21,7 @@ pub struct PolylinePlugin;
 pub const SHADER_HANDLE: Handle<Shader> = uuid_handle!("b180bfe9-10c8-48fe-b27a-dfa41436d7d0");
 
 impl Plugin for PolylinePlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
+    fn build(&self, app: &mut App) {
         load_internal_asset!(
             app,
             SHADER_HANDLE,

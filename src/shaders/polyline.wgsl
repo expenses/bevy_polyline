@@ -22,6 +22,8 @@ var<uniform> material: PolylineMaterial;
 struct Vertex {
     @location(0) point_a: vec3<f32>,
     @location(1) point_b: vec3<f32>,
+    @location(2) color_a: vec3<f32>,
+    @location(3) color_b: vec3<f32>,
     @builtin(vertex_index) index: u32,
 };
 
@@ -60,7 +62,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let y_basis = vec2(-x_basis.y, x_basis.x);
 
     var line_width = material.width;
-    var color = material.color;
+    var color = vec4(mix(vertex.color_a, vertex.color_b, position.z), 1.0);
 
     #ifdef POLYLINE_PERSPECTIVE
         line_width /= clip.w;
